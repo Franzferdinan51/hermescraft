@@ -402,6 +402,10 @@ except: print(sys.argv[1])
         pretty "$(api_post '/action/stop')"
         ;;
 
+    surface)
+        pretty "$(api_post '/action/surface')"
+        ;;
+
     # Mining
     collect|mine|c)
         BLOCK="${1:?Usage: mc collect BLOCK [count]}"
@@ -623,10 +627,71 @@ except: print(sys.argv[1])
         ;;
 
     bg_goto)
-        X="${1:?Usage: mc bg_goto X Y Z}"
-        Y="${2:?Usage: mc bg_goto X Y Z}"
-        Z="${3:?Usage: mc bg_goto X Y Z}"
-        pretty "$(api_post '/task/goto' "{\"x\":$X,\"y\":$Y,\"z\":$Z}")"
+        X="${1:?Usage: mc bg_goto X Y Z [range]}"
+        Y="${2:?Usage: mc bg_goto X Y Z [range]}"
+        Z="${3:?Usage: mc bg_goto X Y Z [range]}"
+        RANGE="${4:-3}"
+        pretty "$(api_post '/task/bg_goto' "{\"x\":$X,\"y\":$Y,\"z\":$Z,\"range\":$RANGE}")"
+        ;;
+
+    # Farming & ranching
+    till|hoe)
+        COUNT="${1:-5}"
+        pretty "$(api_post '/action/till' "{\"count\":$COUNT}")"
+        ;;
+
+    sow|plant)
+        SEED="${1:-}"
+        COUNT="${2:-10}"
+        if [ -n "$SEED" ]; then
+            pretty "$(api_post '/action/sow' "{\"seed\":\"$SEED\",\"count\":$COUNT}")"
+        else
+            pretty "$(api_post '/action/sow' "{\"count\":$COUNT}")"
+        fi
+        ;;
+
+    harvest|reap)
+        RADIUS="${1:-8}"
+        CAP="${2:-16}"
+        pretty "$(api_post '/action/harvest' "{\"radius\":$RADIUS,\"cap\":$CAP}")"
+        ;;
+
+    inspect|what)
+        X="${1:?Usage: mc inspect X Y Z}"
+        Y="${2:?Usage: mc inspect X Y Z}"
+        Z="${3:?Usage: mc inspect X Y Z}"
+        pretty "$(api_post '/action/inspect' "{\"x\":$X,\"y\":$Y,\"z\":$Z}")"
+        ;;
+
+    breed|mate)
+        ANIMAL="${1:?Usage: mc breed cow|sheep|pig|chicken}"
+        pretty "$(api_post '/action/breed' "{\"animal\":\"$ANIMAL\"}")"
+        ;;
+
+    shear)
+        pretty "$(api_post '/action/shear')"
+        ;;
+
+    milk)
+        pretty "$(api_post '/action/milk')"
+        ;;
+
+    door|opendoor)
+        if [ "${1:-}" = "close" ]; then
+            pretty "$(api_post '/action/door' '{"close":true}')"
+        else
+            pretty "$(api_post '/action/door' '{}')"
+        fi
+        ;;
+
+    fish|cast)
+        TIMEOUT="${1:-120}"
+        pretty "$(api_post '/action/fish' "{\"timeout_s\":$TIMEOUT}")"
+        ;;
+
+    bg_fish)
+        TIMEOUT="${1:-180}"
+        pretty "$(api_post '/task/fish' "{\"timeout_s\":$TIMEOUT}")"
         ;;
 
     bg)

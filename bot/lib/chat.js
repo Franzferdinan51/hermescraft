@@ -1,4 +1,4 @@
-export const CURRENT_CAST = ['steve', 'reed', 'moss', 'flint', 'ember'];
+export const CURRENT_CAST = ['duckbot', 'steve', 'reed', 'moss', 'flint', 'ember'];
 export const LEGACY_CAST = ['marcus', 'sarah', 'jin', 'dave', 'lisa', 'tommy', 'elena', 'mia', 'genghis', 'cleopatra', 'tesla', 'pirate', 'monk', 'goblin'];
 
 export function buildKnownNames(myName = '', nearbyNames = []) {
