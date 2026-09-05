@@ -10,20 +10,25 @@ SOUL_FILE="$SCRIPT_DIR/SOUL-landfolk.md"
 
 # Preserve the currently working Anthropic env from the calling shell.
 # Do not override it with stale on-disk values.
-MC_HOST="${MC_HOST:-localhost}"
+MC_HOST="${MC_HOST:-127.0.0.1}"
 MC_PORT="${MC_PORT:-25565}"
-BASE_API_PORT=3001
-MODEL="${MODEL:-claude-sonnet-4-20250514}"
-PROVIDER="${PROVIDER:-anthropic}"
+MC_AUTH="${MC_AUTH:-offline}"
+MODEL=""
+PROVIDER=""
+# Modern Hermes: each character is a Bot profile under ~/.hermes/profiles/.
+PROFILE_PREFIX="minecraft"
 BOTS_ONLY=false
 AGENTS_ONLY=false
 
-AGENTS=(
-  "Steve:friend"
-  "Reed:water"
-  "Moss:garden"
-  "Flint:stone"
-  "Ember:fire"
+# Cast (name:role). DuckBot is the overseer; the rest are the Landfolk cast.
+# Ports match the live HermesCraft deployment (DuckBot 3001, Landfolk 3011-3015).
+CAST=(
+  "DuckBot:overseer:3001"
+  "Steve:friend:3011"
+  "Reed:water:3012"
+  "Moss:garden:3013"
+  "Flint:stone:3014"
+  "Ember:fire:3015"
 )
 
 PIDS=()
@@ -34,11 +39,17 @@ while [[ $# -gt 0 ]]; do
     --bots-only) BOTS_ONLY=true; shift ;;
     --agents-only) AGENTS_ONLY=true; shift ;;
     --port) MC_PORT="$2"; shift 2 ;;
+    --profile-prefix) PROFILE_PREFIX="$2"; shift 2 ;;
     --model) MODEL="$2"; shift 2 ;;
     --provider) PROVIDER="$2"; shift 2 ;;
     --help|-h)
       echo "Landfolk launcher"
       echo "Usage: ./landfolk.sh [--port LAN_PORT] [--agents-only] [--bots-only]"
+      echo ""
+      echo "Options:"
+      echo "  --port PORT         Minecraft server port (default: 25565)"
+      echo "  --profile-prefix P  Hermes profile prefix (default: minecraft)"
+      echo "  --model M / --provider P   overrides for the brains"
       exit 0 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
@@ -66,11 +77,10 @@ done
 
 if [ "$AGENTS_ONLY" = false ]; then
   echo "Starting landfolk bot bodies on $MC_HOST:$MC_PORT"
-  for i in "${!AGENTS[@]}"; do
-    IFS=':' read -r name role <<< "${AGENTS[$i]}"
-    PORT=$((BASE_API_PORT + i))
+  for entry in "${CAST[@]}"; do
+    IFS=':' read -r name role port <<< "$entry"
     cd "$BOT_DIR"
-    MC_HOST="$MC_HOST" MC_PORT="$MC_PORT" MC_USERNAME="$name" API_PORT="$PORT" node server.js > "/tmp/bot-${name,,}.log" 2>&1 &
+    MC_HOST="$MC_HOST" MC_PORT="$MC_PORT" MC_AUTH="$MC_AUTH" MC_USERNAME="$name" API_PORT="$port" node server.js > "/tmp/bot-${name,,}.log" 2>&1 &
     BOT_PIDS+=($!)
     cd "$SCRIPT_DIR"
     sleep 2
@@ -79,10 +89,9 @@ if [ "$AGENTS_ONLY" = false ]; then
 fi
 
 FAILED=()
-for i in "${!AGENTS[@]}"; do
-  IFS=':' read -r name role <<< "${AGENTS[$i]}"
-  PORT=$((BASE_API_PORT + i))
-  CONN=$(curl -sf "http://localhost:$PORT/health" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('connected',False))" 2>/dev/null || echo "False")
+for entry in "${CAST[@]}"; do
+  IFS=':' read -r name role port <<< "$entry"
+  CONN=$(curl -sf "http://127.0.0.1:$port/health" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('connected',False))" 2>/dev/null || echo "False")
   if [ "$CONN" != "True" ]; then
     FAILED+=("$name")
   fi
@@ -94,31 +103,24 @@ fi
 
 [ "$BOTS_ONLY" = true ] && { echo "Bots ready."; wait; exit 0; }
 
-echo "Launching landfolk agents with $MODEL via $PROVIDER"
-for i in "${!AGENTS[@]}"; do
-  IFS=':' read -r name role <<< "${AGENTS[$i]}"
+# Modern Hermes: every character is its own Bot profile; brains use the
+# proven `hermes chat --cli --yolo --query-file <prompt>` invocation.
+for entry in "${CAST[@]}"; do
+  IFS=':' read -r name role port <<< "$entry"
   name_lower="${name,,}"
-  PORT=$((BASE_API_PORT + i))
-  AGENT_HOME="$HOME/.hermes-landfolk-${name_lower}"
+  PROFILE="${PROFILE_PREFIX}-${name_lower}"
   PROMPT_FILE="$PROMPT_DIR/${name_lower}.md"
+  [ -f "$PROMPT_FILE" ] || PROMPT_FILE="$SOUL_FILE"
 
-  mkdir -p "$AGENT_HOME/memories" "$AGENT_HOME/sessions"
-  cp "$SOUL_FILE" "$AGENT_HOME/SOUL.md"
-  if [ -f "$HOME/.hermes/config.yaml" ]; then
-    cp "$HOME/.hermes/config.yaml" "$AGENT_HOME/config.yaml"
-    sed -i 's/max_iterations: [0-9]*/max_iterations: 200/' "$AGENT_HOME/config.yaml"
-    sed -i 's/memory_enabled: false/memory_enabled: true/' "$AGENT_HOME/config.yaml"
-    sed -i 's/user_profile_enabled: false/user_profile_enabled: true/' "$AGENT_HOME/config.yaml"
-  fi
-  for f in .env auth.json auth.lock; do
-    [ -f "$HOME/.hermes/$f" ] && ln -sf "$HOME/.hermes/$f" "$AGENT_HOME/$f" 2>/dev/null
-  done
+  echo "  🧠 $name ($role) on port $port · profile=$PROFILE"
 
-  PROMPT=$(cat "$PROMPT_FILE")
-  HERMES_ARGS=(chat --yolo -q "$PROMPT" -m "$MODEL" --provider "$PROVIDER")
-  HERMES_HOME="$AGENT_HOME" MC_API_URL="http://localhost:$PORT" MC_USERNAME="$name" "$HERMES" "${HERMES_ARGS[@]}" > "/tmp/agent-${name_lower}.log" 2>&1 &
+  HERMES_ARGS=(chat --cli --yolo --query-file "$PROMPT_FILE")
+  [ -n "${SKILLS:-}" ] && HERMES_ARGS+=(-s "$SKILLS")
+  [ -n "$MODEL" ] && HERMES_ARGS+=(-m "$MODEL")
+  [ -n "$PROVIDER" ] && HERMES_ARGS+=(--provider "$PROVIDER")
+
+  HERMES_HOME="$HOME/.hermes/profiles/$PROFILE" MC_API_URL="http://127.0.0.1:$port" MC_USERNAME="$name" "$HERMES" "${HERMES_ARGS[@]}" > "/tmp/agent-${name_lower}.log" 2>&1 &
   PIDS+=($!)
-  echo "  🧠 $name on port $PORT"
   sleep 4
 done
 

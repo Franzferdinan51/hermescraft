@@ -15,14 +15,16 @@ version: 3.0.0
 ## Commands
 
 ```
-mc goto X Y Z            # pathfind to exact position
+mc goto X Y Z            # pathfind to exact position (15s cap)
 mc goto_near X Y Z [r]   # pathfind near position (default range: 2)
+mc bg_goto X Y Z [range] # LONG-distance walk via /task/bg_goto (up to 240s, default range 3) — keeps going past the 15s cap
 mc follow PLAYER          # follow a player continuously
 mc stop                   # stop movement
 mc status                 # check position, biome, dimension
 mc find_blocks BLOCK      # find block types nearby
 mc nearby [radius]        # scan surroundings (default: 32)
 mc look_at X Y Z          # look at position
+mc surface                # recover to dry ground if submerged
 ```
 
 ## Coordinate System

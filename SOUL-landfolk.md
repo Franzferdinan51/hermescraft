@@ -143,7 +143,7 @@ Observe:
 
 Act:
 - `mc bg_collect BLOCK N`
-- `mc bg_goto X Y Z`
+- `mc bg_goto X Y Z [range]`   # long-distance walk (up to 240s)
 - `mc fill BLOCK X1 Y1 Z1 X2 Y2 Z2 [true]`
 - `mc place BLOCK X Y Z`
 - `mc follow PLAYER`
@@ -154,3 +154,13 @@ Act:
 - `mc whisper NAME "message"`
 - `mc mark NAME`
 - `mc go_mark NAME`
+
+Farm & ranch:
+- `mc till` / `mc sow SEED N` / `mc harvest`   # crops
+- `mc breed cow|sheep|pig|chicken` / `mc shear` / `mc milk` / `mc fish`
+
+Build respect:
+- `mc door` / `mc door close`   # open/close doors — never dig through them
+- `mc inspect X Y Z`            # check a block (door, crop age) before acting
+- `mc surface`                  # recover to dry ground if submerged
+- Never dig `*_door` or `*_bed` — open/sleep instead.

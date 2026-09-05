@@ -6,65 +6,64 @@ triggers:
   - grow food minecraft
   - minecraft food
   - breed animals
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Minecraft Farming
 
-## Commands
+## Commands (full farming + ranching action set)
 
 ```
-mc collect CROP N        # harvest crops
-mc place SEEDS X Y Z     # plant seeds
-mc craft ITEM             # craft farming tools
-mc smelt RAW_FOOD         # cook food in furnace
-mc attack ANIMAL          # kill for meat
-mc find_blocks BLOCK      # find farmland, water, crops
-mc interact X Y Z         # use hoe on dirt
-mc use                    # use held item (bone meal, etc)
+mc till [count=5]                 # hoe dirt/grass -> farmland (needs a hoe equipped)
+mc sow SEED [count=10]            # plant on empty farmland (auto-picks a seed if omitted)
+mc harvest [radius=8] [cap=16]    # reap mature crops (wheat/carrot/potato/beetroot) + loot drops
+mc breed cow|sheep|pig|chicken    # feed 2 adults to produce a baby (need the right food)
+mc shear                          # shear a nearby sheep for wool (need shears)
+mc milk                           # milk a nearby cow for milk_bucket (need a bucket)
+mc fish [timeout=120]             # fish at open water with sky (need a fishing_rod)
+mc bg_fish [timeout=180]          # background cast via /task/fish — keeps checking chat
+mc collect CROP N                 # hand-harvest crops / break grass for seeds
+mc craft ITEM                     # craft tools (stone_hoe, shears, bucket, fishing_rod)
+mc smelt RAW_FOOD                 # cook food in furnace
+mc inventory                      # check what you have before you act
+```
+
+Breeding food map:
+
+```
+cow/mooshroom/sheep -> wheat          pig -> carrot potato beetroot
+chicken              -> wheat_seeds / melon_seeds / pumpkin_seeds / beetroot_seeds
 ```
 
 ## Quick Food (Early Game)
 
-Fastest way to not starve:
+1. Kill animals: `mc attack cow`, `mc attack pig`, `mc attack chicken` (or
+   `mc bg_fight cow`) — or raise them instead: `mc breed`.
+2. `mc pickup` — collect raw meat.
+3. `mc smelt raw_beef` (or raw_porkchop, raw_chicken).
+4. Cooked steak = 8 food points (best common food).
 
-1. Kill animals: `mc attack cow`, `mc attack pig`, `mc attack chicken`
-2. `mc pickup` — collect raw meat
-3. `mc smelt raw_beef` (or raw_porkchop, raw_chicken)
-4. Cooked steak = 8 food points (best common food)
+## Crop Farming (the modern flow)
 
-## Crop Farming
+1. Craft a hoe: `mc craft stone_hoe`.
+2. `mc till` — the bot hoes the nearest clear dirt/grass within 5 blocks
+   (turns coarse/rooted dirt to dirt first, then tills to farmland). Water
+   within 4 blocks keeps it hydrated.
+3. Get seeds: `mc collect short_grass` (wheat_seeds) or `mc harvest`.
+4. `mc sow [seed]` — plants on empty farmland, up to 20.
+5. Later: `mc harvest` — reaps mature crops and walks over the drops to
+   loot them. Replant with `mc sow` to keep the cycle going.
 
-### Setup
-1. Craft hoe: `mc craft stone_hoe`
-2. Find water or `mc place water_bucket X Y Z`
-3. Till dirt near water: equip hoe, `mc interact X Y Z` on dirt blocks
-4. Get seeds: break grass with hand → wheat seeds
-5. Plant: `mc place wheat_seeds X Y Z` on farmland
+### Growth notes
+- Wheat/carrots/potatoes mature in ~20 minutes of daylight; beetroot ~10.
+- Ripe wheat is golden; `mc inspect X Y Z` shows a crop's current age
+  (`metadata`/properties).
+- Harvest order: wheat age 7, carrots age 7, potatoes age 7, beetroot age 3.
 
-### Harvest
-- Wheat grows in ~20 minutes. Fully grown = golden color.
-- `mc collect wheat N` — harvest mature wheat
-- `mc craft bread` — 3 wheat → 1 bread (6 food points)
-
-### Best Crops
-- **Wheat**: bread (6 food) — easy, found everywhere
-- **Carrots**: eat raw (3 food) or golden carrot (6 food + saturation)
-- **Potatoes**: bake in furnace (5 food) — excellent
-- **Beetroot**: beetroot soup (6 food) — decent
-
-## Animal Farming
-
-### Breeding
-1. Build fenced enclosure: `mc craft oak_fence`
-2. Lure animals with food (wheat for cows/sheep, seeds for chickens, carrots for pigs)
-3. Feed two of same animal to breed
-
-### Animal Products
-- **Cow**: raw beef (cook it), leather
-- **Pig**: raw porkchop (cook it)
-- **Chicken**: raw chicken (cook it), feathers, eggs
-- **Sheep**: wool (shear or kill), raw mutton
+### Animal Products (ranching)
+- **Cow**: beef, leather, and `mc milk` for milk_bucket (drinks clear poison).
+- **Pig**: porkchop. **Chicken**: meat + feathers + eggs.
+- **Sheep**: `mc shear` for wool (regrows after it eats grass).
 
 ## Food Rankings (food points + saturation)
 

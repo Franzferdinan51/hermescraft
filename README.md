@@ -107,12 +107,13 @@ The current featured civilization cast is the crash-survivor group:
 
 ### Landfolk Mode
 
-A smaller 5-character cast for a player's personal LAN world.
+A 6-character cast (DuckBot + 5 Landfolk) for a player's LAN world.
 
 Current cast:
-- Steve — your normal Minecraft buddy
+- DuckBot — the overseer / lead, your main point of contact
+- Steve — your normal Minecraft buddy (construction foreman)
 - Reed — wants to build a fishing shack on the water
-- Moss — makes paths, gardens, and cozy green spaces
+- Moss — makes paths, gardens, and cozy green spaces (farmer)
 - Flint — gravitates toward caves, stone, and mining routes
 - Ember — builds hearth and forge energy around camp
 
@@ -217,34 +218,29 @@ Most reliable path:
 1. start the bot bodies
 2. launch each Hermes brain directly in its own terminal
 
-Start the Landfolk bot bodies:
+Start the Landfolk bot bodies (modern HermesCraft 26.2, offline auth):
 
 ```bash
 cd ~/hermescraft
-./scripts/run-landfolk-bots.sh <LAN_PORT>
+./scripts/run-landfolk-bots.sh 25565    # DuckBot:3001, Steve:3011, Reed:3012, Moss:3013, Flint:3014, Ember:3015
 ```
 
-Then launch one agent per terminal.
-
-Example for Steve:
+Then launch one agent per terminal. Each character is a Hermes **Bot
+profile** (`~/.hermes/profiles/minecraft-<name>`) and runs the modern
+`--query-file` invocation:
 
 ```bash
 cd ~/hermescraft
-PROMPT="$(cat prompts/landfolk/steve.md)" && \
-HERMES_HOME="$HOME/.hermes-landfolk-steve" \
-MC_API_URL="http://localhost:3001" \
-MC_USERNAME="Steve" \
-hermes chat --yolo -q "$PROMPT" -m claude-sonnet-4-20250514 --provider anthropic
+./scripts/run-landfolk-agent.sh Steve 3011 prompts/landfolk/steve.md minecraft-steve
 ```
 
-You can use the helper script instead:
+Repeat for Reed (3012), Moss (3013), Flint (3014), Ember (3015), and
+DuckBot (3001) with their matching profile and prompt. You can also just run
+`./landfolk.sh` once, which starts bodies **and** agents for the whole cast.
 
-```bash
-cd ~/hermescraft
-./scripts/run-landfolk-agent.sh Steve 3001 prompts/landfolk/steve.md "$HOME/.hermes-landfolk-steve"
-```
-
-Repeat the pattern for Reed, Moss, Flint, and Ember on ports 3002–3005.
+> **Model note:** each profile pins its own model (e.g. a local LM Studio /
+  llama.cpp endpoint via `provider: custom`). Set `MODEL`/`PROVIDER` env on
+  the `run-landfolk-agent.sh` or `landfolk.sh` command to override per run.
 
 ## Useful `mc` commands
 
@@ -266,7 +262,17 @@ Action:
 
 ```bash
 mc bg_collect oak_log 5
-mc bg_goto 100 64 100
+mc bg_goto 100 64 100            # long-distance walk (range default 3)
+mc till                           # hoe dirt -> farmland
+mc sow wheat_seeds                # plant crops
+mc harvest                        # reap ripe crops
+mc breed cow                      # breed two cows
+mc shear                          # shear sheep
+mc milk                           # milk a cow
+mc fish                           # cast at open water
+mc door                           # open nearest door
+mc surface                        # get back to dry ground if submerged
+mc inspect 100 63 100            # check a block before acting
 mc follow Steve
 mc craft stone_pickaxe
 mc fight zombie
@@ -299,9 +305,9 @@ This matters for both believability and demo integrity.
 Primary files:
 - `hermescraft.sh` — single-agent companion launcher
 - `civilization.sh` — multi-agent civilization launcher
-- `landfolk.sh` — small-cast LAN launcher
-- `scripts/run-landfolk-bots.sh` — start the 5 Landfolk bot bodies
-- `scripts/run-landfolk-agent.sh` — launch one Landfolk Hermes brain cleanly
+- `landfolk.sh` — small-cast LAN launcher (bodies + brains, 6-bot cast)
+- `scripts/run-landfolk-bots.sh` — start the 6 Landfolk bot bodies
+- `scripts/run-landfolk-agent.sh` — launch one Landfolk Hermes brain (profile + --query-file)
 - `bot/server.js` — Mineflayer HTTP bot server
 - `bot/lib/` — routing and perception helpers
 - `bot/test/` — unit tests
@@ -309,8 +315,9 @@ Primary files:
 - `SOUL-minecraft.md` — companion behavior
 - `SOUL-civilization.md` — civilization behavior
 - `SOUL-landfolk.md` — landfolk behavior
-- `prompts/` — character prompts
-- `docs/` — mode notes and hackathon/demo docs
+- `prompts/` — character prompts (incl. `prompts/landfolk/duckbot.md`)
+- `skills/` — minecraft skills taught to the characters
+- `docs/` — mode notes, BOT_MODE.md (Bot Mode mapping), and hackathon/demo docs
 
 Archived reference / experimental material:
 - `docs/archive/` — old plans, audits, arena notes

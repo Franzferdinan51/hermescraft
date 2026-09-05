@@ -10,16 +10,10 @@
 # Environment:
 #   MC_HOST      Minecraft server host (default: localhost)
 #   MC_PORT      Minecraft server port (default: 25565)
-#   MC_USERNAME  Bot name (default: HermesBot)
+#   MC_USERNAME  Bot name (default: DuckBot)
 # ═══════════════════════════════════════════════════════════════
 
 set -euo pipefail
-
-# Claude Code sets ANTHROPIC_API_KEY="" (empty) in subprocesses, which shadows
-# hermes's own .env. Always load the key directly from ~/.hermes/.env.
-_HERMES_KEY=$(grep "^ANTHROPIC_API_KEY=" "$HOME/.hermes/.env" 2>/dev/null | head -1 | cut -d= -f2-)
-[ -n "$_HERMES_KEY" ] && export ANTHROPIC_API_KEY="$_HERMES_KEY"
-unset _HERMES_KEY
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BOT_DIR="$SCRIPT_DIR/bot"
@@ -27,7 +21,7 @@ BIN_DIR="$SCRIPT_DIR/bin"
 
 MC_HOST="${MC_HOST:-localhost}"
 MC_PORT="${MC_PORT:-25565}"
-MC_USERNAME="${MC_USERNAME:-HermesBot}"
+MC_USERNAME="${MC_USERNAME:-DuckBot}"
 API_PORT="${API_PORT:-3001}"
 # API_URL is set after arg parsing (see below)
 
@@ -51,7 +45,7 @@ while [[ $# -gt 0 ]]; do
             echo "       ./hermescraft.sh --bot-only"
             echo ""
             echo "Options:"
-            echo "  --name NAME   Set bot username (default: HermesBot)"
+            echo "  --name NAME   Set bot username (default: DuckBot)"
             echo "  --port PORT   Set API port (default: 3001)"
             echo "  --soul FILE   Use custom SOUL file instead of SOUL-minecraft.md"
             echo "  --bot-only    Start bot server only (no Hermes agent)"
@@ -60,7 +54,7 @@ while [[ $# -gt 0 ]]; do
             echo "Environment:"
             echo "  MC_HOST       Minecraft server host (default: localhost)"
             echo "  MC_PORT       Minecraft server port (default: 25565)"
-            echo "  MC_USERNAME   Bot name (default: HermesBot)"
+            echo "  MC_USERNAME   Bot name (default: DuckBot)"
             echo "  API_PORT      Bot API port (default: 3001)"
             exit 0 ;;
         *) GOAL="$1"; shift ;;
@@ -165,7 +159,8 @@ echo "  Say: hermes follow me / hermes build a house"
 echo "  ═══════════════════════════════════════"
 echo ""
 
-# Build the prompt
+# Build the prompt and deliver it via --query-file (nothing shell-interpreted),
+# matching the modern Hermes CLI that HermesCraft's Landfolk mode uses.
 if [ -n "$GOAL" ]; then
     PROMPT="You're in Minecraft. Your goal: $GOAL
 
@@ -182,8 +177,12 @@ Play naturally — mine, craft, explore, build, fight mobs, chat with the player
 Start by running \`mc status\`."
 fi
 
-$HERMES chat --yolo -q "$PROMPT"
+PROMPT_FILE="/tmp/hermescraft-prompt-$$.md"
+printf '%b\n' "$PROMPT" > "$PROMPT_FILE"
+
+"$HERMES" chat --cli --yolo --query-file "$PROMPT_FILE"
 EXIT_CODE=$?
+rm -f "$PROMPT_FILE"
 cleanup
 trap - EXIT INT TERM
 exit $EXIT_CODE
